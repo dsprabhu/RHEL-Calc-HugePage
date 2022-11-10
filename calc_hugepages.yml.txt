@@ -1,0 +1,55 @@
+- name: Calculate HugePages
+  hosts: all
+  gather_facts: yes
+
+  tasks:
+
+#    - debug:
+#        msg: "ansible_memtotal_mb = {{ansible_memtotal_mb}}"
+
+    - name: Calculate MEMTOTAL
+      set_fact:
+        mtotal: "{{ ansible_memtotal_mb | int * 1024 }}"
+
+#    - debug:
+#        msg: "memtotal: {{mtotal}}"
+
+    - name: Get Hugepage Infr from /proc/meminfo
+      command: /usr/bin/grep Hugepagesize /proc/meminfo
+      register: calc
+      changed_when: false
+
+    - name: Calculating Hugepage size
+      set_fact:
+        hpsize: "{{ calc.stdout.split()[1] }}"
+
+#    - debug:
+#        msg: "hpsize = {{hpsize}}"
+
+    - name: Calculating...part1
+      set_fact:
+        calc1: "{{ ( mtotal | int / hpsize | int / 2 ) + ( mtotal | int / hpsize | int / 100) |int }}"
+
+#    - debug:
+#        msg: "calc1 = {{calc1}}"
+
+    - name: Calculating...part2
+      set_fact:
+        calc2: "{{ (calc1 | int % 2) }}"
+
+#    - debug:
+#        msg: "calc2 = {{calc2 }}"
+
+    - name: Calculate Number of Hugepages
+      set_fact:
+        numhp: "{{ calc | int + 1}}"
+      when: calc2 != 0
+
+    - name: Calculate Number of Hugepages
+      set_fact:
+        numhp: "{{ calc | int  }}"
+      when: calc2 == 0
+
+
+    - debug:
+        msg: "NumHP = {{numhp}}"
